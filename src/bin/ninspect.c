@@ -187,6 +187,7 @@ doit(Nrrd *nout, Nrrd *nin, int smart, float amount) {
   airArray *mop;
   int axis, srl, sap, ssi, E, margin, which;
   size_t min[3];
+  int abort = 0;
 
   if (!(nout && nin)) {
     sprintf(err, "%s: got NULL pointer", me);
@@ -216,9 +217,13 @@ doit(Nrrd *nout, Nrrd *nin, int smart, float amount) {
       fprintf(stderr, "ERROR\n");
       sprintf(err, "%s: trouble doing projections for axis %d", me, axis);
       biffAdd(NINSPECT, err);
-      airMopError(mop); // return 1;
+      airMopError(mop); abort = 1;
     }
     fprintf(stderr, "%s: ... done with axis %d projections\n", me, axis);
+  }
+  
+  if(abort) {
+    return 1;
   }
 
   if (nrrdSpaceRightAnteriorSuperior == nin->space) {
