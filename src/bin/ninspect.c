@@ -208,16 +208,17 @@ doit(Nrrd *nout, Nrrd *nin, int smart, float amount) {
   margin = 6;
 
   /* do projections for each axis, with some progress indication to sterr */
+  #pragma omp parallel for shared(nproj,nin)
   for (axis=0; axis<=2; axis++) {
-    fprintf(stderr, "%s: doing axis %d projections ... ", me, axis);
+    fprintf(stderr, "%s: doing axis %d projections ... \n", me, axis);
     fflush(stderr);
     if (ninspect_proj(nproj[axis], nin, axis, smart, amount)) {
       fprintf(stderr, "ERROR\n");
       sprintf(err, "%s: trouble doing projections for axis %d", me, axis);
       biffAdd(NINSPECT, err);
-      airMopError(mop); return 1;
+      airMopError(mop); // return 1;
     }
-    fprintf(stderr, "done\n");
+    fprintf(stderr, "%s: ... done with axis %d projections\n", me, axis);
   }
 
   if (nrrdSpaceRightAnteriorSuperior == nin->space) {
