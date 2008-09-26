@@ -1040,10 +1040,11 @@ nrrdSaveMulti(const char *fnameFormat, const Nrrd *const *nin,
     sprintf(err, "%s: got NULL pointer", me);
     biffAdd(NRRD, err); return 1;
   }
-  if (!( _nrrdContainsPercentThisAndMore(fnameFormat, 'u') )) {
+  if (!( _nrrdContainsPercentThisAndMore(fnameFormat, 'd') || 
+				 _nrrdContainsPercentThisAndMore(fnameFormat, 'u') )) {
     sprintf(err, "%s: given format \"%s\" doesn't seem to "
             "have the \"%%u\" conversion specification to print "
-            "an unsigned int\n", me, fnameFormat);
+            "an integer\n", me, fnameFormat);
     biffAdd(NRRD, err); return 1;
   }
 
