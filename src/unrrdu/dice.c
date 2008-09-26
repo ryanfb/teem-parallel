@@ -36,7 +36,7 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
   char *base, *err, fnout[AIR_STRLEN_MED], /* file name out */
     fffname[AIR_STRLEN_MED],  /* format for filename */
     *ftmpl;                   /* format template */
-  Nrrd *nin, *nout;
+  Nrrd *nin, *nout, **nnout;
   int top, pret, start, fit;
   unsigned int axis;
   size_t pos;
@@ -78,66 +78,54 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
     return 1;
   }
   
-  /* HEY: this should use nrrdSaveMulti(), and if there's additional
-     smarts here, they should be moved into nrrdSaveMulti() */
-  if (airStrlen(ftmpl)) {
-    if (!( _nrrdContainsPercentThisAndMore(ftmpl, 'd') 
-           || _nrrdContainsPercentThisAndMore(ftmpl, 'u') )) {
-      fprintf(stderr, "%s: given filename format \"%s\" doesn't seem to "
-              "have the converstion specification to print an integer\n",
-              me, ftmpl);
-      airMopError(mop);
-      return 1;
-    }
-    sprintf(fffname, "%%s%s", ftmpl);
-  } else {
+  if (!airStrlen(ftmpl)) {
     top = start + nin->axis[axis].size-1;
     if (top > 9999999) {
-      sprintf(fffname, "%%s%%08d.nrrd");
+      sprintf(fffname, "%%08d.nrrd");
     } else if (top > 999999) {
-      sprintf(fffname, "%%s%%07d.nrrd");
+      sprintf(fffname, "%%07d.nrrd");
     } else if (top > 99999) {
-      sprintf(fffname, "%%s%%06d.nrrd");
+      sprintf(fffname, "%%06d.nrrd");
     } else if (top > 9999) {
-      sprintf(fffname, "%%s%%05d.nrrd");
+      sprintf(fffname, "%%05d.nrrd");
     } else if (top > 999) {
-      sprintf(fffname, "%%s%%04d.nrrd");
+      sprintf(fffname, "%%04d.nrrd");
     } else if (top > 99) {
-      sprintf(fffname, "%%s%%03d.nrrd");
+      sprintf(fffname, "%%03d.nrrd");
     } else if (top > 9) {
-      sprintf(fffname, "%%s%%02d.nrrd");
+      sprintf(fffname, "%%02d.nrrd");
     } else {
-      sprintf(fffname, "%%s%%01d.nrrd");
+      sprintf(fffname, "%%01d.nrrd");
     }
   }
+	else {
+		sprintf(fffname, "%s", ftmpl);
+	}
+
   nout = nrrdNew();
   airMopAdd(mop, nout, (airMopper)nrrdNuke, airMopAlways);
+	nnout = (Nrrd**) malloc(sizeof(Nrrd *));
+	nnout[0] = nout;
 
+	// Create an output filename template to pass to nrrdSaveMulti
+	// Ex: "dir/%04d.png"
+	sprintf(fnout, "%s%s", base, ftmpl);
+
+	// TODO: parallelize this
+	// #pragma omp parallel for firstprivate(fffname, fnout, nout)
   for (pos=0; pos<nin->axis[axis].size; pos++) {
     if (nrrdSlice(nout, nin, axis, pos)) {
       airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
       fprintf(stderr, "%s: error slicing nrrd:%s\n", me, err);
       airMopError(mop);
-      return 1;
+      //return 1;
     }
-    if (0 == pos && !airStrlen(ftmpl)) {
-      /* See if these slices would be better saved as PNG or PNM images.
-         Altering the file name will tell nrrdSave() to use a different
-         file format. */
-      if (nrrdFormatPNG->fitsInto(nout, nrrdEncodingRaw, AIR_FALSE)) {
-        strcpy(fffname + strlen(fffname) - 4, "png");
-      } else {
-        fit = nrrdFormatPNM->fitsInto(nout, nrrdEncodingRaw, AIR_FALSE);
-        if (2 == fit) {
-          strcpy(fffname + strlen(fffname) - 4, "pgm");
-        } else if (3 == fit) {
-          strcpy(fffname + strlen(fffname) - 4, "ppm");
-        }
-      }
-    }
-    sprintf(fnout, fffname, base, pos+start);
-    fprintf(stderr, "%s: %s ...\n", me, fnout);
-    if (nrrdSave(fnout, nout, NULL)) {
+
+    fprintf(stderr, "%s: ", me);
+		fprintf(stderr, fnout, pos+start);
+		fprintf(stderr, " ...\n");
+
+    if (nrrdSaveMulti(fnout, AIR_CAST(const Nrrd *const *, nnout), 1, pos+start, NULL)) {
       airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
       fprintf(stderr, "%s: error writing nrrd to \"%s\":%s\n",
               me, fnout, err);
