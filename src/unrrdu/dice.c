@@ -109,7 +109,7 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
 
 	// Create an output filename template to pass to nrrdSaveMulti
 	// Ex: "dir/%04d.png"
-	sprintf(fnout, "%s%s", base, ftmpl);
+	sprintf(fnout, "%s%s", base, fffname);
 
 	// TODO: parallelize this
 	// #pragma omp parallel for firstprivate(fffname, fnout, nout)
