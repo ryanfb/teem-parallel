@@ -99,23 +99,23 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
       sprintf(fffname, "%%01d.nrrd");
     }
   }
-	else {
-		sprintf(fffname, "%s", ftmpl);
-	}
+  else {
+    sprintf(fffname, "%s", ftmpl);
+  }
 
 
-	// Create an output filename template to pass to nrrdSaveMulti
-	// Ex: "dir/%04d.png"
-	sprintf(fnout, "%s%s", base, fffname);
+  // Create an output filename template to pass to nrrdSaveMulti
+  // Ex: "dir/%04d.png"
+  sprintf(fnout, "%s%s", base, fffname);
 
-	#pragma omp parallel for firstprivate(nout, nnout)
+  #pragma omp parallel for firstprivate(nout, nnout)
   for (pos=0; pos<nin->axis[axis].size; pos++) {
-		if((nout == NULL) && (nnout == NULL)) {
-			nout = nrrdNew();
-			airMopAdd(mop, nout, (airMopper)nrrdNuke, airMopAlways);
-			nnout = (Nrrd**) malloc(sizeof(Nrrd *));
-			nnout[0] = nout;
-		}
+    if((nout == NULL) && (nnout == NULL)) {
+	nout = nrrdNew();
+	airMopAdd(mop, nout, (airMopper)nrrdNuke, airMopAlways);
+	nnout = (Nrrd**) malloc(sizeof(Nrrd *));
+	nnout[0] = nout;
+    }
     if (nrrdSlice(nout, nin, axis, pos)) {
       airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
       fprintf(stderr, "%s: error slicing nrrd:%s\n", me, err);
@@ -124,8 +124,8 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
     }
 
     fprintf(stderr, "%s: ", me);
-		fprintf(stderr, fnout, pos+start);
-		fprintf(stderr, " ...\n");
+    fprintf(stderr, fnout, pos+start);
+    fprintf(stderr, " ...\n");
 
     if (nrrdSaveMulti(fnout, AIR_CAST(const Nrrd *const *, nnout), 1, pos+start, NULL)) {
       airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
@@ -135,10 +135,10 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
       abort = 1;
     }
   }
-
-	if(abort) {
-		return 1;
-	}
+  
+  if(abort) {
+    return 1;
+  }
 
   airMopOkay(mop);
   return 0;

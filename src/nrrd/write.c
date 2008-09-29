@@ -1041,7 +1041,7 @@ nrrdSaveMulti(const char *fnameFormat, const Nrrd *const *nin,
     biffAdd(NRRD, err); return 1;
   }
   if (!( _nrrdContainsPercentThisAndMore(fnameFormat, 'd') || 
-				 _nrrdContainsPercentThisAndMore(fnameFormat, 'u') )) {
+         _nrrdContainsPercentThisAndMore(fnameFormat, 'u') )) {
     sprintf(err, "%s: given format \"%s\" doesn't seem to "
             "have the \"%%u\" conversion specification to print "
             "an integer\n", me, fnameFormat);
