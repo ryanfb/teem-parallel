@@ -36,11 +36,12 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
   char *base, *err, fnout[AIR_STRLEN_MED], /* file name out */
     fffname[AIR_STRLEN_MED],  /* format for filename */
     *ftmpl;                   /* format template */
-  Nrrd *nin, *nout, **nnout;
+  Nrrd *nin, *nout = NULL, **nnout = NULL;
   int top, pret, start, fit;
   unsigned int axis;
   size_t pos;
   airArray *mop;
+	int abort = 0;
 
   OPT_ADD_AXIS(axis, "axis to slice along");
   OPT_ADD_NIN(nin, "input nrrd");
@@ -102,23 +103,24 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
 		sprintf(fffname, "%s", ftmpl);
 	}
 
-  nout = nrrdNew();
-  airMopAdd(mop, nout, (airMopper)nrrdNuke, airMopAlways);
-	nnout = (Nrrd**) malloc(sizeof(Nrrd *));
-	nnout[0] = nout;
 
 	// Create an output filename template to pass to nrrdSaveMulti
 	// Ex: "dir/%04d.png"
 	sprintf(fnout, "%s%s", base, fffname);
 
-	// TODO: parallelize this
-	// #pragma omp parallel for firstprivate(fffname, fnout, nout)
+	#pragma omp parallel for firstprivate(nout, nnout)
   for (pos=0; pos<nin->axis[axis].size; pos++) {
+		if((nout == NULL) && (nnout == NULL)) {
+			nout = nrrdNew();
+			airMopAdd(mop, nout, (airMopper)nrrdNuke, airMopAlways);
+			nnout = (Nrrd**) malloc(sizeof(Nrrd *));
+			nnout[0] = nout;
+		}
     if (nrrdSlice(nout, nin, axis, pos)) {
       airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
       fprintf(stderr, "%s: error slicing nrrd:%s\n", me, err);
       airMopError(mop);
-      //return 1;
+      abort = 1;
     }
 
     fprintf(stderr, "%s: ", me);
@@ -130,9 +132,13 @@ unrrdu_diceMain(int argc, char **argv, char *me, hestParm *hparm) {
       fprintf(stderr, "%s: error writing nrrd to \"%s\":%s\n",
               me, fnout, err);
       airMopError(mop);
-      return 1;
+      abort = 1;
     }
   }
+
+	if(abort) {
+		return 1;
+	}
 
   airMopOkay(mop);
   return 0;
